@@ -113,8 +113,9 @@ class ReadthroughTTLCache(Generic[Key, Value]):
 
     def start_ttl_thread(self):
         def purge_expired_entries_with_wait():
-            self.purge_expired_entries()
-            time.sleep(self.ttl.total_seconds())
+            while True:
+                self.purge_expired_entries()
+                time.sleep(self.ttl.total_seconds())
 
         thread = threading.Thread(target=purge_expired_entries_with_wait)
         thread.setDaemon(True)
