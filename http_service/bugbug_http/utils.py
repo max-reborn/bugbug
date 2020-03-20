@@ -104,6 +104,10 @@ class ReadthroughTTLCache(Generic[Key, Value]):
         self.items_last_accessed[key] = datetime.datetime.now()
         return item
 
+    def force_store(self, key):
+        self.items_storage[key] = self.load_item_function(key)
+        self.items_last_accessed[key] = datetime.datetime.now()
+
     def purge_expired_entries(self):
         purge_entries_before = datetime.datetime.now() - self.ttl
         for (key, time_last_touched) in list(self.items_last_accessed.items()):

@@ -18,9 +18,8 @@ def integration_test_cache_thread():
     TTL_SECONDS = 5
     cache = ReadthroughTTLCache(timedelta(seconds=TTL_SECONDS), lambda key: "payload")
 
-    # get twice to ensure key is stored in memory
-    cache.get("test_key")
-    cache.get("test_key")
+    cache.force_store("test_key")
+
     cache.start_ttl_thread()
     time.sleep(TTL_SECONDS / 2)
     assert "test_key" in cache

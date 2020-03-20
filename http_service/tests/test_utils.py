@@ -45,10 +45,7 @@ def test_cache_purges_after_ttl():
     cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
 
     with patch("datetime.datetime", mockdatetime):
-
-        # call twice in succession to ensure item is stored in cache
-        cache.get("key_a")
-        cache.get("key_a")
+        cache.force_store("key_a")
 
         # after one hour
         mockdatetime.set_now(datetime(2019, 4, 1, 11))
@@ -66,9 +63,7 @@ def test_cache_ttl_refreshes_after_get():
     cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
 
     with patch("datetime.datetime", mockdatetime):
-        # call twice in succession to ensure item is stored in cache
-        cache.get("key_a")
-        cache.get("key_a")
+        cache.force_store("key_a")
 
         # after one hour
         mockdatetime.set_now(datetime(2019, 4, 1, 11))
@@ -85,3 +80,9 @@ def test_cache_ttl_refreshes_after_get():
         mockdatetime.set_now(datetime(2019, 4, 1, 13, 1))
         cache.purge_expired_entries()
         assert "key_a" not in cache
+
+
+def test_force_store():
+    cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
+    cache.force_store("key_a")
+    assert "key_a" in cache
