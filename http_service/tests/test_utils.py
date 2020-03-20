@@ -6,7 +6,7 @@
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from bugbug_http.utils import IdleTTLCache
+from bugbug_http.utils import ReadthroughTTLCache
 
 
 class MockDatetime:
@@ -20,12 +20,35 @@ class MockDatetime:
         self.mock_now = new_mock_now
 
 
-def test_purges_after_ttl():
+def test_doesnt_cache_unless_accessed_within_ttl():
     mockdatetime = MockDatetime(datetime(2019, 4, 1, 10))
-    cache = IdleTTLCache(timedelta(hours=2))
+    cache = ReadthroughTTLCache(timedelta(hours=4), lambda x: "payload")
 
     with patch("datetime.datetime", mockdatetime):
-        cache["key_a"] = "payload"
+        cache.get("key_a")
+
+        # after one hour
+        mockdatetime.set_now(datetime(2019, 4, 1, 11))
+        assert "key_a" not in cache
+
+        # after two hours
+        mockdatetime.set_now(datetime(2019, 4, 1, 12))
+        cache.get("key_a")
+
+        # after three hours
+        mockdatetime.set_now(datetime(2019, 4, 1, 13))
+        assert "key_a" in cache
+
+
+def test_cache_purges_after_ttl():
+    mockdatetime = MockDatetime(datetime(2019, 4, 1, 10))
+    cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
+
+    with patch("datetime.datetime", mockdatetime):
+
+        # call twice in succession to ensure item is stored in cache
+        cache.get("key_a")
+        cache.get("key_a")
 
         # after one hour
         mockdatetime.set_now(datetime(2019, 4, 1, 11))
@@ -38,19 +61,20 @@ def test_purges_after_ttl():
         assert "key_a" not in cache
 
 
-def test_ttl_refreshes_after_get():
+def test_cache_ttl_refreshes_after_get():
     mockdatetime = MockDatetime(datetime(2019, 4, 1, 10))
-    cache = IdleTTLCache(timedelta(hours=2))
+    cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
 
     with patch("datetime.datetime", mockdatetime):
-        cache["key_a"] = "payload"
+        # call twice in succession to ensure item is stored in cache
+        cache.get("key_a")
+        cache.get("key_a")
 
         # after one hour
         mockdatetime.set_now(datetime(2019, 4, 1, 11))
         cache.purge_expired_entries()
         assert "key_a" in cache
-
-        assert cache["key_a"] == "payload"
+        assert cache.get("key_a") == "payload"
 
         # after three hours
         mockdatetime.set_now(datetime(2019, 4, 1, 13))
