@@ -36,7 +36,7 @@ redis = Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost/0"))
 
 
 def load_model_for_service(model_name):
-    LOGGER.info("Recreating the %r model in cache" % model_name)
+    LOGGER.info(f"Recreating the {model_name} model in cache")
     try:
         return load_model(model_name)
     except FileNotFoundError:
