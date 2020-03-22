@@ -15,7 +15,6 @@ from redis import Redis
 from bugbug import bugzilla, commit_features, repository, test_scheduling
 from bugbug.model import Model
 from bugbug.models import load_model
-from bugbug_http import ALLOW_MISSING_MODELS
 from bugbug_http.utils import ReadthroughTTLCache, get_hgmo_stack
 
 logging.basicConfig(level=logging.INFO)
@@ -34,24 +33,8 @@ MODELS_NAMES = [
 DEFAULT_EXPIRATION_TTL = 7 * 24 * 3600  # A week
 redis = Redis.from_url(os.environ.get("REDIS_URL", "redis://localhost/0"))
 
-
-def load_model_for_service(model_name):
-    LOGGER.info(f"Recreating the {model_name} model in cache")
-    try:
-        return load_model(model_name)
-    except FileNotFoundError:
-        if ALLOW_MISSING_MODELS:
-            LOGGER.info(
-                "Missing %r model, skipping because ALLOW_MISSING_MODELS is set"
-                % model_name
-            )
-            return None
-        else:
-            raise
-
-
 MODEL_CACHE: ReadthroughTTLCache[str, Model] = ReadthroughTTLCache(
-    timedelta(hours=2), load_model_for_service
+    timedelta(hours=1), load_model
 )
 MODEL_CACHE.start_ttl_thread()
 
