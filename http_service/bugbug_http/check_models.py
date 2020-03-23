@@ -8,7 +8,7 @@ import os
 import sys
 
 from bugbug_http import ALLOW_MISSING_MODELS
-from bugbug_http.models import MODELS_NAMES, get_model
+from bugbug_http.models import MODEL_CACHE, MODELS_NAMES
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger()
@@ -18,7 +18,7 @@ def check_models():
     for model_name in MODELS_NAMES:
         # Try loading the model
         try:
-            get_model(model_name)
+            MODEL_CACHE.get(model_name)
         except FileNotFoundError:
             if ALLOW_MISSING_MODELS:
                 LOGGER.info(

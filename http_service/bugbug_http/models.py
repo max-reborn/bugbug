@@ -39,10 +39,6 @@ MODEL_CACHE: ReadthroughTTLCache[str, Model] = ReadthroughTTLCache(
 MODEL_CACHE.start_ttl_thread()
 
 
-def get_model(model_name):
-    return MODEL_CACHE.get(model_name)
-
-
 def setkey(key, value, expiration=DEFAULT_EXPIRATION_TTL):
     LOGGER.debug(f"Storing data at {key}: {value}")
     redis.set(key, value)
@@ -72,7 +68,7 @@ def classify_bug(model_name, bug_ids, bugzilla_token):
     if not bugs:
         return "NOK"
 
-    model = get_model(model_name)
+    model = MODEL_CACHE.get(model_name)
 
     if not model:
         LOGGER.info("Missing model %r, aborting" % model_name)
@@ -158,7 +154,7 @@ def schedule_tests(branch, rev):
             commit_test["test_job"] = data
             commit_tests.append(commit_test)
 
-        probs = get_model(f"test{granularity}select").classify(
+        probs = MODEL_CACHE.get(f"test{granularity}select").classify(
             commit_tests, probabilities=True
         )
         selected_indexes = np.argwhere(probs[:, 1] > test_selection_threshold)[:, 0]
