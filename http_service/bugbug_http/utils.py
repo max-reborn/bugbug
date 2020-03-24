@@ -85,7 +85,7 @@ class ReadthroughTTLCache(Generic[Key, Value]):
 
     def purge_expired_entries(self):
         purge_entries_before = datetime.datetime.now() - self.ttl
-        for (key, time_last_touched) in list(self.items_last_accessed.items()):
+        for key, time_last_touched in list(self.items_last_accessed.items()):
             if time_last_touched < purge_entries_before:
                 LOGGER.info(
                     f"Evicting item with the following key from readthroughcache: {key}"
