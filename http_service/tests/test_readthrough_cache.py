@@ -41,11 +41,13 @@ class PurgeCountCache(ReadthroughTTLCache):
         super().__init__(ttl, load_item_function)
         self.purge_count = 0
 
-    def purge_expired_entries(self):
-        print("going to purge")
-        super().purge_expired_entries()
-        print("purged")
-        self.purge_count += 1
+        def purge_then_increment(purge):
+            purge()
+            self.purge_count += 1
+
+        super().purge_expired_entries = purge_then_increment(
+            super().purge_expired_entries
+        )
 
 
 def test_doesnt_cache_unless_accessed_within_ttl():
@@ -117,26 +119,36 @@ def test_force_store():
 
 
 def test_cache_thread():
+    def cache_with_purge_count(cache):
+        cache.purge_count = 0
+        purge = cache.purge_expired_entries
+
+        def purge_then_increment():
+            purge()
+            cache.purge_count += 1
+
+        cache.purge_expired_entries = purge_then_increment
+        return cache
+
     mockdatetime = MockDatetime(datetime(2019, 4, 1, 10))
-    cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
+    cache = cache_with_purge_count(
+        ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
+    )
     mocksleep = MockSleep(mockdatetime)
     with patch("datetime.datetime", mockdatetime):
         with patch("time.sleep", mocksleep.sleep):
             cache.get("key_a", force_store=True)
             cache.start_ttl_thread()
-            print("hanging a")
 
             # after one hour
             mockdatetime.set_now(datetime(2019, 4, 1, 11))
             assert "key_a" in cache
             assert mocksleep.wakeups_count == 0
 
-            print("hanging b")
-
             # after two hours one minute
             before_timechange_purge_count = cache.purge_count
             mockdatetime.set_now(datetime(2019, 4, 1, 12, 1))
-            print("hanging c")
+
             while cache.purge_count == before_timechange_purge_count:
                 time.sleep(0)
             assert "key_a" not in cache
