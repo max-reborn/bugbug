@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import time
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -38,11 +39,13 @@ class MockSleep:
 class PurgeCountCache(ReadthroughTTLCache):
     def __init__(self, ttl, load_item_function):
         super().__init__(ttl, load_item_function)
-        self.purge_expired_entries_count = 0
+        self.purge_count = 0
 
     def purge_expired_entries(self):
+        print("going to purge")
         super().purge_expired_entries()
-        self.purge_expired_entries_count += 1
+        print("purged")
+        self.purge_count += 1
 
 
 def test_doesnt_cache_unless_accessed_within_ttl():
@@ -121,15 +124,19 @@ def test_cache_thread():
         with patch("time.sleep", mocksleep.sleep):
             cache.get("key_a", force_store=True)
             cache.start_ttl_thread()
+            print("hanging a")
 
             # after one hour
             mockdatetime.set_now(datetime(2019, 4, 1, 11))
             assert "key_a" in cache
             assert mocksleep.wakeups_count == 0
 
+            print("hanging b")
+
             # after two hours one minute
-            before_purge_timestamp = cache.last_purged_time
+            before_timechange_purge_count = cache.purge_count
             mockdatetime.set_now(datetime(2019, 4, 1, 12, 1))
-            while cache.last_purged_time == before_purge_timestamp:
-                pass
+            print("hanging c")
+            while cache.purge_count == before_timechange_purge_count:
+                time.sleep(0)
             assert "key_a" not in cache
