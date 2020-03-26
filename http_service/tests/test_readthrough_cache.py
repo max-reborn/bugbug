@@ -26,13 +26,23 @@ class MockSleep:
         self.wakeups_count = 0
 
         # count variable used to ensure that context switch into
-        # thread claling sleep occurred
+        # thread calling sleep occurred
 
     def sleep(self, sleep_seconds):
         self.wakeup_time = self.mock_datetime.now() + timedelta(seconds=sleep_seconds)
         while self.mock_datetime.now() < self.wakeup_time:
             pass
         self.wakeups_count += 1
+
+
+class PurgeCountCache(ReadthroughTTLCache):
+    def __init__(self, ttl, load_item_function):
+        super().__init__(ttl, load_item_function)
+        self.purge_expired_entries_count = 0
+
+    def purge_expired_entries(self):
+        super().purge_expired_entries()
+        self.purge_expired_entries_count += 1
 
 
 def test_doesnt_cache_unless_accessed_within_ttl():
