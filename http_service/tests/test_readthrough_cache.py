@@ -5,7 +5,7 @@
 
 import time
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from bugbug_http.readthrough_cache import ReadthroughTTLCache
 
@@ -113,9 +113,25 @@ def test_cache_ttl_refreshes_after_get():
 
 
 def test_force_store():
-    cache = ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload")
+    def with_spied_storage(cache):
+        cache.storage_access_count = 0
+        cache_getitem = cache.items_storage.__getitem__
+        def spy_getitem(key):
+            cache.storage_access_count += 1
+            return cache_getitem(key)
+        mock_items_storage = MagicMock()
+        mock_items_storage.__getitem__.side_effect = spy_getitem
+        mock_items_storage.__setitem__.side_effect = cache.items_storage.__setitem__
+        mock_items_storage.__contains__.side_effect = cache.items_storage.__contains__
+        cache.items_storage = mock_items_storage
+        return cache
+
+    cache = with_spied_storage(ReadthroughTTLCache(timedelta(hours=2), lambda x: "payload"))
     cache.get("key_a", force_store=True)
+
     assert "key_a" in cache
+    assert cache.get("key_a") == "payload"
+    assert cache.storage_access_count == 1
 
 
 def test_cache_thread():
